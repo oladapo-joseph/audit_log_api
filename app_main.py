@@ -30,6 +30,7 @@ class Staff(db.Document):
     password = db.StringField(required=True)
     secret_key = db.StringField()
     timestamp = db.DateTimeField()
+    admin = db.BooleanField(default=False)
     
     def to_json(self):
         return {
@@ -79,15 +80,19 @@ def register():
     """
     details = request.json
     pwd = generate_password_hash(details['password'], 'sha256')
- 
- 
+    try:
+        header = request.headers['Authorization'].split(' ')[1][:-1]
+    except:
+        header = ''
+    admin = lambda x: True if x=='admin' else False
     new_staff = Staff(
                         first_name= details['first_name'],
                         last_name = details['last_name'],
                         username = create_username(details['first_name'], details['last_name']),
                         password = pwd,
                         secret_key = details['secret_key'],
-                        timestamp = datetime.utcnow()
+                        timestamp = datetime.utcnow(),
+                        admin = admin(header)
                         )
     new_staff.save()
     return new_staff.to_json()
@@ -136,14 +141,15 @@ def transactions():
                                                 total_paid = transaction['total'],
                                                 timestamp = datetime.utcnow()
                                                 )
-                new_transaction.save()
+                new_transaction.save()                          # saves a new transaction 
                 message = {
                                 'message': 'Transaction logged successfully'
                                 }
                 
             else:                                                                       # else a GET request
-                all_transactions = Transactions.objects(staff_username=login.username).all()       # to display all templates by user 
-                list_of_transactions = {str(index+1):temp.to_json() for index,temp in enumerate(all_transactions)}              
+                
+                all_transactions = Transactions.objects(staff_username=login.username).all()       # to get the list of all transactions
+                list_of_transactions = {str(index+1):temp.to_json() for index,temp in enumerate(all_transactions)}              # to get them in a disctionary format
                 message = {'transactions': list_of_transactions}
             
         else:
@@ -206,7 +212,7 @@ def edit_template(log_id):
 def admin(who):
     """
     This can only be done using admin rights
-    
+    To gain admin right, when registering add 'Bearer admin' to authorization header
     
     
     Keyword arguments:
@@ -219,7 +225,8 @@ def admin(who):
                 containing the details based on request
     
     """
-    admin = True
+    SECRET_KEY = request.headers['Authorization'].split(' ')[1][:-1]
+    admin = Staff.objects(secret_key=SECRET_KEY).first().admin
     all_report = {}
     if admin:
         if who=='c':
