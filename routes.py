@@ -1,6 +1,7 @@
+from pandas import json_normalize
 from api import app
 from documents import Staff ,Transactions, Login_status
-from flask import request, jsonify
+from flask import request, jsonify, make_response, Response
 from werkzeug.security import check_password_hash, generate_password_hash
 from encoder import encode_data,decode_data, create_username
 from datetime import datetime
@@ -11,12 +12,12 @@ import logging
 def register():
     """
         This function registers new member of staff and saves their details in the staff document
-        
+    
     """
     details = request.json
-    pwd = generate_password_hash(details['password'], 'sha256')
+    
     try:
-        header = request.headers['Authorization'].split(' ')[1][:-1]
+        header = request.headers['Authorization']
     except:
         header = ''
     admin = lambda x: True if x=='admin' else False
@@ -24,13 +25,14 @@ def register():
                         first_name= details['first_name'],
                         last_name = details['last_name'],
                         username = create_username(details['first_name'], details['last_name']),
-                        password = pwd,
+                        password = generate_password_hash(details['password'], 'sha256'),
                         secret_key = details['secret_key'],
                         timestamp = datetime.utcnow(),
                         admin = admin(header)
                         )
     new_staff.save()
-    return new_staff.to_json()
+    return jsonify(new_staff.to_json())
+
 
 
 
@@ -44,30 +46,39 @@ def login():
                         })
     
     else:
-        SECRET_KEY = request.headers['Authorization'].split(' ')[1][:-1]   # carries te secret key from the header 
+        SECRET_KEY = request.headers['Authorization']   # carries te secret key from the header 
         token = encode_data(json_data= login ,secret = SECRET_KEY)          # encoding the secret key
         login = Login_status(username =user.username, token=token )              # saving the token generated to be accessed later
         login.save()
+        
         
         return jsonify(
                         {
                             'message': 'Login Successful, kindly save token, expires after 5 mins',
                             'token' : f'{token}'
                         }
-                       )
-
+                       ) 
 
 
 @app.route('/staff/log', methods=['POST', 'GET'])
 def transactions():
-    token = request.headers['Authorization'].split(' ')[1][:-1]             # to check for token
+    """ 
+        This function manages the transactions logged by the user
+        A POST request logs transaction per staff
+        A GET request fetches all the transactions by the requesting staff
+
+    Returns:
+        json
+    """
+    
+    token = request.headers['Authorization']            # to check for token
     
     login = Login_status.objects(token=token).first()
     if login:                                                                # checks if token exists'      
      # checks if the token is valid, returns true or false and e==
         auth, valid = decode_data(token, Staff.objects(username=login.username).first().secret_key)
         if valid: 
-            if request.method=='POST':                                      # if user posts a transaction      
+            if request.method=='POST':                                      # if user wants to post a transaction      
                 transaction = request.json
                 new_transaction = Transactions( staff_username = login.username,
                                                 customer_username =transaction['customer_name'],
@@ -78,11 +89,11 @@ def transactions():
                                                 )
                 new_transaction.save()                          # saves a new transaction 
                 message = {
-                                'message': 'Transaction logged successfully'
+                            'message': 'Transaction logged successfully'
                                 }
                 
             else:                                                                       # else a GET request
-                # to get the list of all transactions
+                # to get the list of all transactions by the staff
                 all_transactions = Transactions.objects(staff_username=login.username).all()       
                 # to get them in a disctionary format
                 list_of_transactions = {str(index+1):temp.to_json() for index,temp in enumerate(all_transactions)}        
@@ -101,7 +112,7 @@ def edit_template(log_id):
     """
         This allows user to update, delete and fetch a transaction.
     """
-    token = request.headers['Authorization'].split(' ')[1][:-1]
+    token = request.headers['Authorization']
     # to check for token
     login= Login_status.objects(token=token).first()
     if login:    
@@ -155,8 +166,9 @@ def admin(who):
                 containing the details based on request
     
     """
+
     try:
-        SECRET_KEY = request.headers['Authorization'].split(' ')[1][:-1]
+        SECRET_KEY = request.headers['Authorization']
         admin = Staff.objects(secret_key=SECRET_KEY).first().admin
         all_report = {}
         if admin:
@@ -187,4 +199,6 @@ def admin(who):
                     
         return jsonify({'Report': all_report})
     except Exception as error:
-        return jsonify({'Error': f'{error}'})
+        return jsonify({'Error': f'{error}',
+                        "auther": f"{request.headers['Authorization']}"
+                        })

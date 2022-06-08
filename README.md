@@ -1,120 +1,111 @@
 # audit_log_api
 
-## A RESTFUL API that logs transactions per staff, using JWT authentication and the MongoDB database
+## A RESTFUL API that logs transactions per staff, using JWT authentication and mongoengine on MongoDB database
 
-## How to use 
+
+
+## To run it on Ubuntu
+
+> $ export FLASK_APP=__int__.py
+
+> $ flask run
+
+
+## Curl commands for testing
+
+
+## How to use:
 
 ### 1. To register as a new staff 
     
-    <URL : localhost:5000/register
-    Method : POST
-    Headers : { 'Authorization': 'Bearer <admin>'   #if admin
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',          
-              }
-    Body :    {
-                'first_name' : 'firstName',
-                ''last_name'' : 'lastName',
-                "password" : '<password>',
-                'secret_key' = '<your secret key>'
-              }
+    curl -i http:localhost:5000/register
+    -X POST
+     --header   "Authorization: {admin}"     #if admin else blank
+    --header   "Accept=application/json"
+    --header  "Content-Type: application/json"
+    -d '{     "first_name" : "firstName",
+                ""last_name"" : "lastName",
+                "password" : "<password>",
+                "secret_key" = "<your secret key>"
+              }'
 
 
 ### 2. Login as a user
 
-    <URL : localhost:5000/login
-      Method : POST
-      Headers : {'Authorization': 'Bearer ' + '<secret_key>',
-                 'Accept': 'application/json',
-                'Content-Type': 'application/json',          
-              }
-     Body :    {
-                'username : 'lead_test@subi.com',
-                'password' : '<password>'
-              }  
-    > 
+    curl -i http:localhost:5000/staff/login   \
+    -X POST \
+     --header   "Authorization: {secret_key}"
+    --header   "Accept=application/json"
+    --header  "Content-Type: application/json"
+     -d '{"username" : "lead_test@subi.com",
+                "password" : <password>
+              }'  
+
 
 
 ### 3 Transaction CRUD
     
 > 1. Log new Transaction
 
-    <URL : locahost:5000/staff/log
-    Method : POST
-    Headers : {
-                'Authorization': 'Bearer <token from login>',
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',          
-              }
-    Body :    {
-                 "customer_name": "joe",
+    curl -i http:localhost:5000/staff/log
+    -X POST
+     --header   "Authorization: {token}"
+    --header   "Accept=application/json"
+    --header  "Content-Type: application/json"
+  -d  '{      "customer_name": "joe",
                 "purchased": "powder",
                 "quantity": "3",
                 "total": 1200
-                     }  
->
-    
-> 2. Get All Template
+                     }' 
 
-    <URL : locahost:5000/staff/log
-    Method : GET
-    Headers : {
-                'Authorization': 'Bearer ' + "{token}"
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',          
-              }
-    Body :    {}      
+
+> 2. Get All Transaction
+    curl -i http:localhost:5000/staff/log
+    -X GET
+    --header   "Authorization: {token}"
+    --header   "Accept=application/json"
+    --header  "Content-Type: application/json"
+
 
 
 ### 3. Single Transaction
 > 1. GET single
 
-    <URL : locahost:5000/staff/log/<id>
-    Method : GET
-    Headers : {
-                'Authorization': 'Bearer ' + "{token}"
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',          
-              }
-    Body :    {}  >
+    curl -i http:localhost:5000/staff/log/<id>
+    -X GET
+    --header   "Authorization: {token}"
+    --header   "Accept=application/json"
+    --header  "Content-Type: application/json"
 
 >2.Update Single Template
 
-    URL : locahost:5000/template/<template_id>
-    
-    Method : PUT
-    Headers : {
-                'Authorization': 'Bearer ' + <access_token from login step>,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',          
-              }
-    Body :    {
-                 "customer_name": "joe",
+    curl -i http:localhost:5000/staff/log/<log_id> \    
+        -X PUT    \
+    --header   "Authorization: {token}"
+    --header   "Accept=application/json"
+    --header  "Content-Type: application/json"
+    -d '{     "customer_name": "joe",
                 "purchased": "powder",
                 "quantity": "3",
-                "total": 1200
-    }   
+                "total": 1200    }'
 
- > 3. DELETE Single Template
+
+ > 3. DELETE Single Transaction
     
-    <URL : locahost:5000/template/<template_id>
-    Method : DELETE
-    Headers : {
-                'Authorization': 'Bearer ' + "{token}"
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',          
-              }
-    Body :    {}                  
+    curl http:localhost:5000/staff/log/<log_id>
+    -X DELETE
+    --header   "Authorization: {token}"
+    --header   "Accept=application/json"
+    --header  "Content-Type: application/json"
+
 
 
 ### 4. Admin 
     
-    URL : /admin/checklog/<string:who>
-    Method: GET
-    Headers: {
-                'Authorization': 'Bearer ' + "{admin_secret_key}"
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',    
-    }
+    curl -i http:localhost:5000/admin/checklog/<string:who>
+    -X GET
+    --header "Authorization: {admin_secret_key}"
+    --header  "Accept": "application/json"
+    --header  "Content-Type": "application/json" 
 
-    body : {}
+> With admin privilege you dont need to login and you can get the report on both customers and staff, so you can specify "c" or "s" as "who"

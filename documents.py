@@ -19,7 +19,10 @@ class Staff(db.Document):
         return {
                 "username": self.username,
                 "message": 'Account Successfully created',
-                "To login": "Add secret key to your authorization header to login. Mode 'Bearer <secret_key>'"}
+                "To login": "Add secret key to your authorization header to login."}
+
+
+
 
 
 class Login_status(db.Document):
@@ -32,6 +35,8 @@ class Login_status(db.Document):
     
     username = db.StringField()
     token = db.StringField()
+    
+    
         
 class Transactions(db.Document):
     """
