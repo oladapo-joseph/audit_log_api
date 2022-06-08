@@ -1,3 +1,4 @@
+import encodings
 from pandas import json_normalize
 from api import app
 from documents import Staff ,Transactions, Login_status
@@ -6,7 +7,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from encoder import encode_data,decode_data, create_username
 from datetime import datetime
 import logging
-        
+
+
+logging.basicConfig(filename='example.log', level=logging.DEBUG)      
         
 @app.route('/staff/register', methods=['POST'])
 def register():
@@ -121,7 +124,7 @@ def edit_template(log_id):
         if valid: 
             temps = request.json
             try:
-                selected_transaction = Transactions.objects(customer_username=login.username)[int(log_id)-1]
+                selected_transaction = Transactions.objects(staff_username=login.username)[int(log_id)-1]
             
                 if request.method=='PUT':            
                     selected_transaction.update( customer_= temps['customer_name'],
@@ -174,31 +177,31 @@ def admin(who):
         if admin:
             if who=='c':
                 all_customers = set([each.customer_username  for each in Transactions.objects])
+                
                 for n, customer in enumerate(all_customers):
                     report = {'Name': f'{customer}'}
+                    logging.info(f'{customer}')
                     details = [item.total_paid for item in Transactions.objects(customer_username=customer)]
-                    report['body']  = {'total purchases': sum(details),
+                    logging.info(f'{details}')
+                    report['summary']  = {'total purchases': sum(details),
                                         'no of patronage': len(details),
                                         'first transaction': Transactions.objects(customer_username= customer).first().timestamp,
                                     "last_transaction": Transactions.objects(customer_username=customer)[len(details)-1].timestamp
                                     }
                     all_report[n+1] = report
-                all_report['all customers']= all_customers   
+
             if who == 's':
-                staff_list = [staff.username for staff in Staff.objects]
-                
+                staff_list = set([staff.username for staff in Staff.objects])
                 for s_no, name in enumerate(staff_list):
                     report = {'Staff username':f'{name}'}
                     details = [item.total_paid for item in Transactions.objects(staff_username=name)]
-                    report['body'] = { 'total_sales': sum(details),
-                                    'count': len(details),
-                                    'first transaction': Transactions.objects(staff_username=name).first().timestamp,
-                                    "last_transaction": Transactions.objects(staff_username=name)[len(details)-1].timestamp
+                    report['summary'] = { 'total_sales': sum(details),
+                                            'count': len(details),
                                     }
                     all_report[s_no+1] = report
                     
         return jsonify({'Report': all_report})
     except Exception as error:
         return jsonify({'Error': f'{error}',
-                        "auther": f"{request.headers['Authorization']}"
+                        "author": f"{request.headers['Authorization']}"
                         })
